@@ -1,0 +1,1 @@
+var jsonrpc = require ('../index.js');
