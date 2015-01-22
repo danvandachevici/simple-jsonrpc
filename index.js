@@ -1,4 +1,5 @@
 var url = require("url");
+var jsonrpc = {};
 
 var errs = {
 	ok: {code: 0},
@@ -10,13 +11,16 @@ var errs = {
 	handlererror: {code: -32004, message: "Handler error"}
 }
 
-var services;
+var services = {};
 
 var lib_can_init = function (initobj) {
 	if (typeof initobj !== 'object' || initobj === null){
 		return errs.noinit;
 	}
-	if ( ! (routes instanceof Array) ) {
+	if ( ! (initobj.routes instanceof Object ) ) {
+		return errs.noroutes;
+	}
+	if (Object.keys(initobj.routes).length === 0) {
 		return errs.noroutes;
 	}
 	for (var i = 0; i < initobj.routes.length; i++) {
@@ -29,22 +33,29 @@ var lib_can_init = function (initobj) {
 	}
 	return errs.ok;
 }
-jsonrpc.init = function (initobj) {
+var master_env = {};
+jsonrpc.init = function (initobj, cb) {
+	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
+		master_env = initobj.env;
+	}
 	var err = lib_can_init(initobj);
 	if ( err.code !== 0 ) {
 		console.log ("Library can't init." + err.message);
+		return cb(err);
 	}
 	for (var i = 0; i < initobj.routes.length; i++){
 		var r = initobj.routes[i];
-		services[i] = {
-			route: r.route,
+		var srv = r.route;
+		services[srv] = {
 			handler: r.handler
 		};
-		/*if (typeof (r.method) === 'string') {
-			services[i].method = r.method;
-		} else {
-			services[i].method = 'POST';
-		}*/
+		services[srv].env = master_env;
+		if (typeof (r.env) === "object" && r.env !== null && Object.keys(r.env).length !==0) {
+			for (var key in r.env) {
+				services[srv].env[key] = r.env[key];
+			}
+		}
+		cb(null, null);
 	}
 };
 var is_jsonrpc_protocol = function (js) {
@@ -75,13 +86,19 @@ jsonrpc.request_handler = function (req, resp) {
 	var url = url.parse(req.url).pathname;
 	var method = req.method;
 	var current_handler = null;
-	for (var i = 0; i < services.length; i++) {
-		if (url.match(services[i].route)) {
-			current_handler = services[i].handler;
-			break;
-		}
+	//for (var i = 0; i < services.length; i++) {
+	//	if (url.match(services[i].route)) {
+	//		current_handler = services[i].handler;
+	//		break;
+	//	}
+	//}
+	if (typeof (services[url]) === "object" && services[url] !== null) {
+		current_handler = services[url].handler;
+	} else {
+		resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
+		return;
 	}
-	if (handler === null) {
+	if (current_handler === null) {
 		resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
 		return;
 	}
@@ -107,7 +124,7 @@ jsonrpc.request_handler = function (req, resp) {
 		}
 		// method check
 		if (typeof (current_handler[json.method]) === "function" ) {
-			current_handler[json.method](env, req, resp, json.params, function (err, result) {
+			current_handler[json.method](env, req, json.params, function (err, result) {
 				if (err) {
 					resp.end(make_jsonrpc_response (json.id, errs.handlererror, err));
 					return;
