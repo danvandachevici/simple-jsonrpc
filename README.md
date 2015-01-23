@@ -60,7 +60,7 @@ And now, simply run this script in a terminal
 	$ curl -X POST -H "Content-type: application/json" -d '{"jsonrpc":"2.0", "id":32, "method": "add", "params":{"a":3}}' http://localhost:9615/api/test
 	{"jsonrpc":"2.0","id":32,"result":7}
 
-In the previous example, I called the 'add' method, with only one parameter, a. The method knows that if it is only called with 'a', it should simply return the incremented value, with the specified increment. This increment is taken from the environment variable, that was set up at the configuration of the routes.
+In the previous example, I called the 'add' method, with only one parameter, a. The method knows that if it is only called with 'a', it should simply return the incremented value, with the default increment. This increment is taken from the environment variable, that was set up at the configuration of the routes.
 
 	$ curl -X POST -H "Content-type: application/json" -d '{"jsonrpc":"2.0", "id":32, "method": "add", "params":{"a":3, "b": 5}}' http://localhost:9615/api/test
 	{"jsonrpc":"2.0","id":32,"result":8}
