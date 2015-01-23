@@ -59,7 +59,7 @@ jsonrpc.init = function (initobj, cb) {
 	}
 };
 var is_jsonrpc_protocol = function (js) {
-	if (js.jsonrpc !== "2.0" || typeof (method) !== "string" || method.match('^rpc\.') ) {
+	if (js.jsonrpc !== "2.0" || typeof (js.method) !== "string" || js.method.match('^rpc\.') ) {
 		return false;
 	}
 	return true;
@@ -83,17 +83,19 @@ var make_jsonrpc_response = function (id, err, data) {
 }
 jsonrpc.request_handler = function (req, resp) {
 	resp.writeHead(200, {'Content-Type': 'application/json'})
-	var url = url.parse(req.url).pathname;
+	var uri = url.parse(req.url).pathname;
 	var method = req.method;
 	var current_handler = null;
+	var current_env = null
 	//for (var i = 0; i < services.length; i++) {
 	//	if (url.match(services[i].route)) {
 	//		current_handler = services[i].handler;
 	//		break;
 	//	}
 	//}
-	if (typeof (services[url]) === "object" && services[url] !== null) {
-		current_handler = services[url].handler;
+	if (typeof (services[uri]) === "object" && services[uri] !== null) {
+		current_handler = services[uri].handler;
+		current_env = services[uri].env;
 	} else {
 		resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
 		return;
@@ -115,16 +117,18 @@ jsonrpc.request_handler = function (req, resp) {
 		try {
 			json = JSON.parse(body);
 		} catch (e) {
+			console.log ("Could not parse json:", body, "because:", e);
 			resp.end (make_jsonrpc_response(json.id, errs.parseerror));
 			return;
 		}
 		if ( ! is_jsonrpc_protocol(json) ) {
+			console.log ("Not jsonrpc protocol,", body);
 			resp.end(make_jsonrpc_response(json.id, errs.parseerror));
 			return;
 		}
 		// method check
 		if (typeof (current_handler[json.method]) === "function" ) {
-			current_handler[json.method](env, req, json.params, function (err, result) {
+			current_handler[json.method](current_env, req, json.params, function (err, result) {
 				if (err) {
 					resp.end(make_jsonrpc_response (json.id, errs.handlererror, err));
 					return;

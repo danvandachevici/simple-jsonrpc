@@ -10,7 +10,10 @@ var jsonrpc_init_obj = {
 	},
 	routes: [
 		{
-			route: '/api/test', handler: require('./test_handler.js'), env: {
+			route: '/api/test',
+			handler: require('./test_handler.js'),
+			env: {
+				increment: 4,
 				inside_key: 'value2'
 			}
 		}
