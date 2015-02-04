@@ -55,8 +55,8 @@ jsonrpc.init = function (initobj, cb) {
 				services[srv].env[key] = r.env[key];
 			}
 		}
-		cb(null, null);
 	}
+	return cb(null, null);
 };
 var is_jsonrpc_protocol = function (js) {
 	if (js.jsonrpc !== "2.0" || typeof (js.method) !== "string" || js.method.match('^rpc\.') ) {

@@ -1,5 +1,5 @@
 # simple-jsonrpc
-A quick and easy-to-use library for JSON-RPC serving.
+A quick and easy-to-use library for JSON-RPC server.
 
 	npm install simple-jsonrpc-server
 
