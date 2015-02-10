@@ -1,5 +1,4 @@
 var jsonrpc = require ('../index.js');
-console.log (jsonrpc);
 
 var http = require('http');
 var fs = require('fs');
@@ -16,6 +15,10 @@ var jsonrpc_init_obj = {
 				increment: 4,
 				inside_key: 'value2'
 			}
+		},
+		{
+			route: '/api/user',
+			handler: require('./login_handler.js')
 		}
 	]
 }

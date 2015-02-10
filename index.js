@@ -1,5 +1,23 @@
+var async = require('async');
 var url = require("url");
 var jsonrpc = {};
+
+var serverLogLevel = 1;
+var loglevels = {
+	'err': 1,
+	'warn': 2,
+	'info': 3,
+	'debug': 4
+};
+
+var logger = function (message, level) {
+	if (serverLogLevel <= loglevels[level]) {
+		var d = new Date();
+		var dstr = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear() + " ";
+		dstr += ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2) + '.' + ('00' + d.getMilliseconds()).slice(-3);
+		console.log (dstr + '\t' + level.toUpperCase() + "\t" + message);
+	}
+};
 
 var errs = {
 	ok: {code: 0},
@@ -35,28 +53,58 @@ var lib_can_init = function (initobj) {
 }
 var master_env = {};
 jsonrpc.init = function (initobj, cb) {
+	if (typeof (initobj.loglevel) === "number") {
+		serverLogLevel = initobj.loglevel;
+	}
+	if (typeof (initobj.loglevel) === "string") {
+		serverLogLevel = loglevels[initobj.loglevel];
+	}
+	logger('Initializing routes...', 'debug');
 	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
 		master_env = initobj.env;
 	}
 	var err = lib_can_init(initobj);
 	if ( err.code !== 0 ) {
-		console.log ("Library can't init." + err.message);
+		logger ("Library can't init." + err.message, 'err');
 		return cb(err);
 	}
-	for (var i = 0; i < initobj.routes.length; i++){
-		var r = initobj.routes[i];
-		var srv = r.route;
+	var iterator = function (item, callback) {
+		var srv = item.route;
 		services[srv] = {
-			handler: r.handler
+			handler: item.handler
 		};
 		services[srv].env = master_env;
-		if (typeof (r.env) === "object" && r.env !== null && Object.keys(r.env).length !==0) {
-			for (var key in r.env) {
-				services[srv].env[key] = r.env[key];
+		if (typeof (item.env) === "object" && item.env !== null && Object.keys(item.env).length !== 0) {
+			for (var key in item.env) {
+				services[srv].env[key] = item.env[key];
 			}
 		}
-	}
-	return cb(null, null);
+		logger('Registered route ' + srv, 'info');
+		callback(null);
+	};
+	async.each (initobj.routes, iterator, function(err) {
+		if (err) {
+			logger ("Library can't init." + err, 'err');
+			return cb(err);
+		} else {
+			logger ('Done initializing routes', 'debug');
+			cb(null, null);
+		}
+	});
+//	for (var i = 0; i < initobj.routes.length; i++){
+//		var r = initobj.routes[i];
+//		var srv = r.route;
+//		services[srv] = {
+//			handler: r.handler
+//		};
+//		services[srv].env = master_env;
+//		if (typeof (r.env) === "object" && r.env !== null && Object.keys(r.env).length !==0) {
+//			for (var key in r.env) {
+//				services[srv].env[key] = r.env[key];
+//			}
+//		}
+//	}
+//	return cb(null, null);
 };
 var is_jsonrpc_protocol = function (js) {
 	if (js.jsonrpc !== "2.0" || typeof (js.method) !== "string" || js.method.match('^rpc\.') ) {
@@ -84,15 +132,10 @@ var make_jsonrpc_response = function (id, err, data) {
 jsonrpc.request_handler = function (req, resp) {
 	resp.writeHead(200, {'Content-Type': 'application/json'})
 	var uri = url.parse(req.url).pathname;
+	logger("Received request to " + uri, 'debug');
 	var method = req.method;
 	var current_handler = null;
-	var current_env = null
-	//for (var i = 0; i < services.length; i++) {
-	//	if (url.match(services[i].route)) {
-	//		current_handler = services[i].handler;
-	//		break;
-	//	}
-	//}
+	var current_env = null;
 	if (typeof (services[uri]) === "object" && services[uri] !== null) {
 		current_handler = services[uri].handler;
 		current_env = services[uri].env;
@@ -117,25 +160,29 @@ jsonrpc.request_handler = function (req, resp) {
 		try {
 			json = JSON.parse(body);
 		} catch (e) {
-			console.log ("Could not parse json:", body, "because:", e);
+			logger ("Could not parse json:" +JSON.stringify(body) + " because:" + JSON.stringify(e), 'err');
 			resp.end (make_jsonrpc_response(json.id, errs.parseerror));
 			return;
 		}
 		if ( ! is_jsonrpc_protocol(json) ) {
-			console.log ("Not jsonrpc protocol,", body);
+			logger ("Not jsonrpc protocol," + JSON.stringify(json), 'err');
 			resp.end(make_jsonrpc_response(json.id, errs.parseerror));
 			return;
 		}
 		// method check
 		if (typeof (current_handler[json.method]) === "function" ) {
+			logger ('Calling method ' + json.method, 'info');
 			current_handler[json.method](current_env, req, json.params, function (err, result) {
 				if (err) {
+					logger('Method error:', err);
 					resp.end(make_jsonrpc_response (json.id, errs.handlererror, err));
 					return;
+				} else {
+					resp.end(make_jsonrpc_response(json.id, null, result));
 				}
-				resp.end(make_jsonrpc_response(json.id, null, result));
-			})
+			});
 		} else {
+			logger ('Method ' + json.method + ' not found', 'warn');
 			resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
 			return;
 		}
