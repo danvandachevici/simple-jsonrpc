@@ -31,7 +31,7 @@ var errs = {
 
 var services = {};
 
-var lib_can_init = function (initobj) {
+var lib_can_init = jsonrpc.lib_can_init = function (initobj) {
 	if (typeof initobj !== 'object' || initobj === null){
 		return errs.noinit;
 	}
@@ -91,20 +91,6 @@ jsonrpc.init = function (initobj, cb) {
 			cb(null, null);
 		}
 	});
-//	for (var i = 0; i < initobj.routes.length; i++){
-//		var r = initobj.routes[i];
-//		var srv = r.route;
-//		services[srv] = {
-//			handler: r.handler
-//		};
-//		services[srv].env = master_env;
-//		if (typeof (r.env) === "object" && r.env !== null && Object.keys(r.env).length !==0) {
-//			for (var key in r.env) {
-//				services[srv].env[key] = r.env[key];
-//			}
-//		}
-//	}
-//	return cb(null, null);
 };
 var is_jsonrpc_protocol = function (js) {
 	if (js.jsonrpc !== "2.0" || typeof (js.method) !== "string" || js.method.match('^rpc\.') ) {

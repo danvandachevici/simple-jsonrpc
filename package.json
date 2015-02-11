@@ -1,6 +1,6 @@
 {
   "name": "simple-jsonrpc-server",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A very simple JSONRPC library, that focuses on quick deploy, and ease of use",
   "main": "index.js",
   "directories": {
@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/toranaga-samma/simple-jsonrpc/issues"
   },
-  "homepage": "https://github.com/toranaga-samma/simple-jsonrpc"
+  "homepage": "https://github.com/toranaga-samma/simple-jsonrpc",
+  "dependencies": {
+    "async": "^0.9.0"
+  }
 }
