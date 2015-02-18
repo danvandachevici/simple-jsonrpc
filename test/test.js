@@ -2,6 +2,10 @@ var assert = require("assert");
 var should = require("should");
 var jsonrpc = require ('../index.js');
 var http = require('http');
+var request = require('request');
+
+var testport = 9983;
+
 describe ("JSON RPC server:", function () {
 	describe ("Configuration:", function () {
 		it('Should be able to init', function (){
@@ -9,7 +13,7 @@ describe ("JSON RPC server:", function () {
 				routes: [
 					{
 						route: '/api/test',
-						handler: require('./test_handler.js'),
+						handler: require('./handler.js'),
 					}
 				]
 			};
@@ -45,5 +49,45 @@ describe ("JSON RPC server:", function () {
 	});
 
 	describe ("Initialization:", function () {
+	});
+	describe ("Routes:", function () {
+		var gresp, gbody;
+		var request_with_params = function (prms, done) {
+			var opts = {
+				uri: 'http://localhost:' + testport + "/api/test",
+				method: "POST",
+				json: {
+					method: "add",
+					jsonrpc: "2.0",
+					id: 3,
+					params: prms
+				}
+			};
+			request(opts, function (err, resp, body) {
+				gresp = resp;
+				gbody = body;
+				done();
+			});
+		}
+		before(function(done) {
+			var jsonrpc_init_obj = {
+				routes: [
+					{
+						route: '/api/test',
+						handler: require('./handler.js'),
+						env: {increment: 1}
+					}
+				]
+			};
+			jsonrpc.init(jsonrpc_init_obj, function (err) {
+				http.createServer(jsonrpc.request_handler).listen(testport);
+				request_with_params({a: 3}, done);
+			});
+		});
+		it ("Should increment 3 to 4", function () {
+			var result = {jsonrpc: "2.0", id:3, result: 4};
+			assert.equal (200, gresp.statusCode)
+			assert.deepEqual(result, gbody);
+		});
 	});
 });

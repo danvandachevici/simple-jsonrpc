@@ -1,7 +1,8 @@
 var async = require('async');
 var url = require("url");
+var default_config = require ('./default_config.json');
 var jsonrpc = {};
-
+var masterConfig = {};
 var serverLogLevel = 1;
 var loglevels = {
 	'err': 1,
@@ -53,12 +54,17 @@ var lib_can_init = jsonrpc.lib_can_init = function (initobj) {
 }
 var master_env = {};
 jsonrpc.init = function (initobj, cb) {
-	if (typeof (initobj.loglevel) === "number") {
-		serverLogLevel = initobj.loglevel;
+	if (typeof (initobj.serverLogLevel) === "undefined"){ 
+		initobj.serverLogLevel = default_config.serverLogLevel;
 	}
-	if (typeof (initobj.loglevel) === "string") {
-		serverLogLevel = loglevels[initobj.loglevel];
+	if (typeof (initobj.serverLogLevel) === "string") {
+		initobj.serverLogLevel = loglevels[initobj.serverLogLevel];
 	}
+	if (typeof (initobj.maxRequestDataSize) === "undefined"){
+		initobj.maxRequestDataSize = default_config.maxRequestDataSize;
+	}
+	masterConfig = initobj;
+
 	logger('Initializing routes...', 'debug');
 	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
 		master_env = initobj.env;
@@ -138,8 +144,10 @@ jsonrpc.request_handler = function (req, resp) {
 	req.on('data', function (data) {
 		body += data;
             // Too much POST data, kill the connection!
-		if (body.length > 1e6) {
+		if (body.length > masterConfig.maxRequestDataSize) {
+			logger('Received body length,' + body.lenth + ' bytes is larger than the preset max body size:' + masterConfig.maxRequestDataSize + 'bytes', 'err');
 			req.connection.destroy();
+			return;
 		}
 	});
 	req.on('end', function () {

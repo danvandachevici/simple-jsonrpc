@@ -4,6 +4,7 @@ var http = require('http');
 var fs = require('fs');
 
 var jsonrpc_init_obj = {
+	loglevel: 'info',
 	env: {
 		master_key: 'value'
 	},
