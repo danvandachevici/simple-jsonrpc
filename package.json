@@ -1,6 +1,6 @@
 {
   "name": "simple-jsonrpc-server",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "A very simple JSONRPC library, that focuses on quick deploy, and ease of use",
   "main": "index.js",
   "directories": {
@@ -19,8 +19,8 @@
     "procedure",
     "call"
   ],
-  "author": "Dan Vandachevici <dan.vandachevici@gmail.com>",
-  "license": "GPLv3",
+  "author": "Dan Vandachevici <dan@vandachevici.ro>",
+  "license": "Beerware",
   "bugs": {
     "url": "https://github.com/toranaga-samma/simple-jsonrpc/issues"
   },
