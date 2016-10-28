@@ -1,13 +1,13 @@
 {
   "name": "simple-jsonrpc-server",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A very simple JSONRPC library, that focuses on quick deploy, and ease of use",
   "main": "index.js",
   "directories": {
     "example": "examples"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test/test.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,10 @@
   },
   "homepage": "https://github.com/toranaga-samma/simple-jsonrpc",
   "dependencies": {
-    "async": "^0.9.0"
+    "async": "^0.9.0",
+    "simple-color-log": "^1.0.1"
+  },
+  "devDependencies": {
+    "request": "^2.76.0"
   }
 }

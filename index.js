@@ -1,109 +1,45 @@
-var async = require('async');
-var url = require("url");
-var default_config = require ('./default_config.json');
-var jsonrpc = {};
-var masterConfig = {};
-var serverLogLevel = 1;
-var loglevels = {
-	'err': 1,
-	'warn': 2,
-	'info': 3,
-	'debug': 4
-};
+"use strict"
 
-var logger = function (message, level) {
-	if (serverLogLevel <= loglevels[level]) {
-		var d = new Date();
-		var dstr = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear() + " ";
-		dstr += ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2) + '.' + ('00' + d.getMilliseconds()).slice(-3);
-		console.log (dstr + '\t' + level.toUpperCase() + "\t" + message);
-	}
-};
+var async 				= require('async');
+var url 				= require("url");
+var log 				= require ('simple-color-log');
 
-var errs = {
-	ok: {code: 0},
-	noinit: {code: -32001, message: "Server error: No init object"},
-	noroutes: {code: -32002, message: "Server error: No routes in init object"},
-	wrongroute: {code: -32003, message: "Server error: Wrong route config in one of the routes"},
-	methodnotfound: {code: -32601, message: "Method not found"},
-	parseerror: {code: -32700, message: "Parse error"},
-	handlererror: {code: -32004, message: "Handler error"}
-}
+var defaultConfig 		= require ('./lib/default_config');
+var errors 				= require ('./lib/Errors');
 
-var services = {};
+var jsonrpc 			= {};
+var run 				= {};
+run.masterConfig 		= {};
+run.masterEnv 			= {};
+run.services 			= {};
+
 
 var lib_can_init = jsonrpc.lib_can_init = function (initobj) {
-	if (typeof initobj !== 'object' || initobj === null){
-		return errs.noinit;
+	if (typeof initobj !== 'object' || initobj === null || Object.keys(initobj).length === 0){
+		return errors.noInit;
 	}
 	if ( ! (initobj.routes instanceof Object ) ) {
-		return errs.noroutes;
+		return errors.noRoutes;
 	}
 	if (Object.keys(initobj.routes).length === 0) {
-		return errs.noroutes;
+		return errors.noRoutes;
 	}
 	for (var i = 0; i < initobj.routes.length; i++) {
 		if (typeof (initobj.routes[i]) !== "object" || initobj.routes[i] === null){
-			return errs.wrongroute;
+			return errors.wrongRoute;
 		}
 		if ( ! initobj.routes[i].hasOwnProperty('route') || ! initobj.routes[i].hasOwnProperty('handler')) {
-			return errs.wrongroute;
+			return errors.wrongRoute;
 		}
 	}
-	return errs.ok;
-}
-var master_env = {};
-jsonrpc.init = function (initobj, cb) {
-	if (typeof (initobj.serverLogLevel) === "undefined"){ 
-		initobj.serverLogLevel = default_config.serverLogLevel;
-	}
-	if (typeof (initobj.serverLogLevel) === "string") {
-		initobj.serverLogLevel = loglevels[initobj.serverLogLevel];
-	}
-	if (typeof (initobj.maxRequestDataSize) === "undefined"){
-		initobj.maxRequestDataSize = default_config.maxRequestDataSize;
-	}
-	masterConfig = initobj;
-
-	logger('Initializing routes...', 'debug');
-	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
-		master_env = initobj.env;
-	}
-	var err = lib_can_init(initobj);
-	if ( err.code !== 0 ) {
-		logger ("Library can't init." + err.message, 'err');
-		return cb(err);
-	}
-	var iterator = function (item, callback) {
-		var srv = item.route;
-		services[srv] = {
-			handler: item.handler
-		};
-		services[srv].env = master_env;
-		if (typeof (item.env) === "object" && item.env !== null && Object.keys(item.env).length !== 0) {
-			for (var key in item.env) {
-				services[srv].env[key] = item.env[key];
-			}
-		}
-		logger('Registered route ' + srv, 'info');
-		callback(null);
-	};
-	async.each (initobj.routes, iterator, function(err) {
-		if (err) {
-			logger ("Library can't init." + err, 'err');
-			return cb(err);
-		} else {
-			logger ('Done initializing routes', 'debug');
-			cb(null, null);
-		}
-	});
+	return errors.ok;
 };
-var is_jsonrpc_protocol = function (js) {
-	if (js.jsonrpc !== "2.0" || typeof (js.method) !== "string" || js.method.match('^rpc\.') ) {
+var is_jsonrpc_protocol = function (json) {
+	if (json.jsonrpc !== "2.0" || typeof (json.method) !== "string" || json.method.match('^rpc\.') ) {
 		return false;
 	}
 	return true;
-}
+};
 var make_jsonrpc_response = function (id, err, data) {
 	if (id === null) {
 		// randomize the id:
@@ -120,32 +56,35 @@ var make_jsonrpc_response = function (id, err, data) {
 		resp.result = data;
 	}
 	return JSON.stringify(resp);
-}
-jsonrpc.request_handler = function (req, resp) {
-	resp.writeHead(200, {'Content-Type': 'application/json'})
+};
+jsonrpc.requestHandler = function (req, resp) {
 	var uri = url.parse(req.url).pathname;
-	logger("Received request to " + uri, 'debug');
+	log.debug("Received request to " + uri);
 	var method = req.method;
-	var current_handler = null;
-	var current_env = null;
-	if (typeof (services[uri]) === "object" && services[uri] !== null) {
-		current_handler = services[uri].handler;
-		current_env = services[uri].env;
+	var currentHandler = null;
+	var currentEnv = null;
+	if (typeof (run.services[uri]) === "object" && run.services[uri] !== null) {
+		currentHandler = run.services[uri].handler;
+		currentEnv = run.services[uri].env;
 	} else {
-		resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
+		resp.writeHead(403);
+		resp.end();
 		return;
 	}
-	if (current_handler === null) {
-		resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
+	if (currentHandler === null) {
+		resp.writeHead(404);
+		resp.end();
 		return;
 	}
+	resp.writeHead(200, {'Content-Type': 'application/json'})
 	var body = '';
 	var json = null;
 	req.on('data', function (data) {
 		body += data;
             // Too much POST data, kill the connection!
-		if (body.length > masterConfig.maxRequestDataSize) {
-			logger('Received body length,' + body.lenth + ' bytes is larger than the preset max body size:' + masterConfig.maxRequestDataSize + 'bytes', 'err');
+		if (body.length > run.masterConfig.maxRequestDataSize) {
+			log.error('Received body length,' + body.length + ' bytes is larger than the preset max body size:' + run.masterConfig.maxRequestDataSize + 'bytes');
+			resp.end(make_jsonrpc_response(null, errors.invalidRequest));
 			req.connection.destroy();
 			return;
 		}
@@ -154,33 +93,78 @@ jsonrpc.request_handler = function (req, resp) {
 		try {
 			json = JSON.parse(body);
 		} catch (e) {
-			logger ("Could not parse json:" +JSON.stringify(body) + " because:" + JSON.stringify(e), 'err');
-			resp.end (make_jsonrpc_response(json.id, errs.parseerror));
+			log.error ("Could not parse json:" +JSON.stringify(body) + " because:", e);
+			resp.end (make_jsonrpc_response(null, errors.parseError));
 			return;
 		}
 		if ( ! is_jsonrpc_protocol(json) ) {
-			logger ("Not jsonrpc protocol," + JSON.stringify(json), 'err');
-			resp.end(make_jsonrpc_response(json.id, errs.parseerror));
+			log.error ("Not jsonrpc protocol," + JSON.stringify(json));
+			resp.end(make_jsonrpc_response(null, errors.parseError));
 			return;
 		}
 		// method check
-		if (typeof (current_handler[json.method]) === "function" ) {
-			logger ('Calling method ' + json.method, 'info');
-			current_handler[json.method](current_env, req, json.params, function (err, result) {
+		if (typeof (currentHandler[json.method]) === "function" ) {
+			log.debug ('Calling method ' + json.method);
+			currentHandler[json.method](currentEnv, req, json.params, function (err, result) {
 				if (err) {
-					logger('Method error:', err);
-					resp.end(make_jsonrpc_response (json.id, errs.handlererror, err));
+					log.error('Method error:', err);
+					resp.end(make_jsonrpc_response (json.id, errors.handlerError, err));
 					return;
 				} else {
 					resp.end(make_jsonrpc_response(json.id, null, result));
 				}
 			});
 		} else {
-			logger ('Method ' + json.method + ' not found', 'warn');
-			resp.end(make_jsonrpc_response(json.id, errs.methodnotfound));
+			log.error('Method ' + json.method + ' not found');
+			resp.end(make_jsonrpc_response(json.id, errors.methodNotFound));
 			return;
 		}
 	});
-}
+};
+jsonrpc.init = function (initobj, cb) {
+	if ( ! initobj.maxRequestDataSize ){
+		initobj.maxRequestDataSize = defaultConfig.maxRequestDataSize;
+	}
+	run.masterConfig = {
+		env: initobj.env || {},
+		routes: initobj.routes || [],
+		maxRequestDataSize: initobj.maxRequestDataSize
+	};
+	run.services = {};
+
+	log.debug('Initializing routes...');
+	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
+		run.masterEnv = initobj.env;
+	}
+	var err = lib_can_init(initobj);
+	if ( err.code ) {		// error.code !== 0
+		log.error ("Library can't init." + err.message);
+		return cb(err);
+	}
+	var iterator = function (item, cb_it) {
+		var srv = item.route;
+		run.services[srv] = {
+			handler: item.handler
+		};
+		run.services[srv].env = run.masterEnv;
+		if (typeof (item.env) === "object" && item.env !== null && Object.keys(item.env).length !== 0) {
+			for (var key in item.env) {
+				run.services[srv].env[key] = item.env[key];
+			}
+		}
+		log.debug('Registered route ' + srv);
+		cb_it(null);
+	};
+	async.each (initobj.routes, iterator, function(err) {
+		if (err) {
+			log.error ("Library can't init." + err);
+			return cb(err);
+		} else {
+			log.info ('Done initializing routes');
+			log.debug("Init obj: ", run);
+			cb(null, null);
+		}
+	});
+};
 
 module.exports = jsonrpc;
