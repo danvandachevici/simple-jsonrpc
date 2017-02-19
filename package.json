@@ -1,6 +1,6 @@
 {
   "name": "simple-jsonrpc-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A very simple JSONRPC library, that focuses on quick deploy, and ease of use",
   "main": "index.js",
   "directories": {
