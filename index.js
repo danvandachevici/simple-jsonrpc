@@ -63,6 +63,11 @@ jsonrpc.requestHandler = function (req, resp) {
 	var method = req.method;
 	var currentHandler = null;
 	var currentEnv = null;
+	if (method.toLowerCase !== "post") {
+		resp.writeHead(403);
+		resp.end();
+		return;
+	}
 	if (typeof (run.services[uri]) === "object" && run.services[uri] !== null) {
 		currentHandler = run.services[uri].handler;
 		currentEnv = run.services[uri].env;
@@ -76,7 +81,6 @@ jsonrpc.requestHandler = function (req, resp) {
 		resp.end();
 		return;
 	}
-	resp.writeHead(200, {'Content-Type': 'application/json'})
 	var body = '';
 	var json = null;
 	req.on('data', function (data) {
@@ -84,6 +88,7 @@ jsonrpc.requestHandler = function (req, resp) {
             // Too much POST data, kill the connection!
 		if (body.length > run.masterConfig.maxRequestDataSize) {
 			log.error('Received body length,' + body.length + ' bytes is larger than the preset max body size:' + run.masterConfig.maxRequestDataSize + 'bytes');
+			resp.writeHead(413, {'Content-Type': 'application/json'});
 			resp.end(make_jsonrpc_response(null, errors.invalidRequest));
 			req.connection.destroy();
 			return;
@@ -94,11 +99,13 @@ jsonrpc.requestHandler = function (req, resp) {
 			json = JSON.parse(body);
 		} catch (e) {
 			log.error ("Could not parse json:" +JSON.stringify(body) + " because:", e);
+			resp.writeHead(400, {'Content-Type': 'application/json'});
 			resp.end (make_jsonrpc_response(null, errors.parseError));
 			return;
 		}
 		if ( ! is_jsonrpc_protocol(json) ) {
 			log.error ("Not jsonrpc protocol," + JSON.stringify(json));
+			resp.writeHead(400, {'Content-Type': 'application/json'});
 			resp.end(make_jsonrpc_response(null, errors.parseError));
 			return;
 		}
@@ -108,14 +115,17 @@ jsonrpc.requestHandler = function (req, resp) {
 			currentHandler[json.method](currentEnv, req, json.params, function (err, result) {
 				if (err) {
 					log.error('Method error:', err);
+					resp.writeHead(200, {'Content-Type': 'application/json'});
 					resp.end(make_jsonrpc_response (json.id, errors.handlerError, err));
 					return;
 				} else {
+					resp.writeHead(200, {'Content-Type': 'application/json'});
 					resp.end(make_jsonrpc_response(json.id, null, result));
 				}
 			});
 		} else {
 			log.error('Method ' + json.method + ' not found');
+			resp.writeHead(404, {'Content-Type': 'application/json'});
 			resp.end(make_jsonrpc_response(json.id, errors.methodNotFound));
 			return;
 		}
