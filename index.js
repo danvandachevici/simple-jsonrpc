@@ -63,7 +63,8 @@ jsonrpc.requestHandler = function (req, resp) {
 	var method = req.method;
 	var currentHandler = null;
 	var currentEnv = null;
-	if (method.toLowerCase !== "post") {
+	if (method.toLowerCase() !== "post") {
+		log.error("Non-post request:", method);
 		resp.writeHead(403);
 		resp.end();
 		return;
@@ -72,11 +73,13 @@ jsonrpc.requestHandler = function (req, resp) {
 		currentHandler = run.services[uri].handler;
 		currentEnv = run.services[uri].env;
 	} else {
+		log.error("No such uri:", uri, run.services[uri]);
 		resp.writeHead(403);
 		resp.end();
 		return;
 	}
 	if (currentHandler === null) {
+		log.error("No such handler");
 		resp.writeHead(404);
 		resp.end();
 		return;
