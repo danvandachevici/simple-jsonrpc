@@ -57,7 +57,7 @@ var make_jsonrpc_response = function (id, err, data) {
 	}
 	return JSON.stringify(resp);
 };
-jsonrpc.requestHandler = function (req, resp) {
+var requestHandler = function (req, resp) {
 	var uri = url.parse(req.url).pathname;
 	log.debug("Received request to " + uri);
 	var method = req.method;
@@ -175,7 +175,7 @@ jsonrpc.init = function (initobj, cb) {
 		} else {
 			log.info ('Done initializing routes');
 			log.debug("Init obj: ", run);
-			cb(null, null);
+			cb(null, requestHandler);
 		}
 	});
 };

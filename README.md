@@ -28,8 +28,8 @@ In order to create a server that serves **JSON-RPC** requests, simply create the
 		]
 	}
 	
-	jsonrpc.init(jsonrpc_init_obj, function (err) {
-		http.createServer(jsonrpc.request_handler).listen(9615);
+	jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
+		http.createServer(handler).listen(9615);
 	});
 
 *handler.js*

@@ -76,8 +76,8 @@ describe ("JSON RPC server:", function () {
 					}
 				]
 			};
-			jsonrpc.init(jsonrpc_init_obj, function (err) {
-				server = http.createServer(jsonrpc.requestHandler).listen(testport);
+			jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
+				server = http.createServer(handler).listen(testport);
 				ready();
 			});
 		});
