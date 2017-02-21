@@ -59,7 +59,6 @@ var make_jsonrpc_response = function (id, err, data) {
 };
 var requestHandler = function (req, resp) {
 	var uri = url.parse(req.url).pathname;
-	log.debug("Received request to " + uri);
 	var method = req.method;
 	var currentHandler = null;
 	var currentEnv = null;
@@ -114,7 +113,6 @@ var requestHandler = function (req, resp) {
 		}
 		// method check
 		if (typeof (currentHandler[json.method]) === "function" ) {
-			log.debug ('Calling method ' + json.method);
 			currentHandler[json.method](currentEnv, req, json.params, function (err, result) {
 				if (err) {
 					log.error('Method error:', err);
@@ -145,7 +143,6 @@ jsonrpc.init = function (initobj, cb) {
 	};
 	run.services = {};
 
-	log.debug('Initializing routes...');
 	if (typeof initobj.env === "object" && initobj.env !== null && Object.keys(initobj.env).length !== 0) {
 		run.masterEnv = initobj.env;
 	}
@@ -165,7 +162,6 @@ jsonrpc.init = function (initobj, cb) {
 				run.services[srv].env[key] = item.env[key];
 			}
 		}
-		log.debug('Registered route ' + srv);
 		cb_it(null);
 	};
 	async.each (initobj.routes, iterator, function(err) {
@@ -173,8 +169,6 @@ jsonrpc.init = function (initobj, cb) {
 			log.error ("Library can't init." + err);
 			return cb(err);
 		} else {
-			log.info ('Done initializing routes');
-			log.debug("Init obj: ", run);
 			cb(null, requestHandler);
 		}
 	});
