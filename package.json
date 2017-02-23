@@ -7,7 +7,8 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "npm install && ./node_modules/.bin/mocha test/test.js"
+    "test": "npm install && ./node_modules/.bin/mocha test/test.js",
+    "lint": "./node_modules/.bin/eslint index.js"
   },
   "repository": {
     "type": "git",
@@ -30,6 +31,8 @@
     "simple-color-log": "^1.0.1"
   },
   "devDependencies": {
+    "eslint": "^3.16.1",
+    "eslint-config-google": "^0.7.1",
     "mocha": "^3.2.0",
     "request": "^2.76.0"
   }
