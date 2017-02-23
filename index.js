@@ -57,6 +57,43 @@ var make_jsonrpc_response = function (id, err, data) {
 	}
 	return JSON.stringify(resp);
 };
+var tryParse = function (body) {
+	return function (cb) {
+		var json;
+		try {
+			json = JSON.parse(body);
+		} catch (e) {
+			log.error ("Could not parse json:" +JSON.stringify(body) + " because:", e);
+			// resp.writeHead(400, {'Content-Type': 'application/json'});
+			// resp.end (make_jsonrpc_response(null, errors.parseError));
+			return cb(errors.parseError);
+		}
+		cb(null, json);
+	};
+};
+var checkJsonrpc = function (cb, json) {
+	if ( ! is_jsonrpc_protocol(json) ) {
+		log.error ("Not jsonrpc protocol," + JSON.stringify(json));
+		// resp.writeHead(400, {'Content-Type': 'application/json'});
+		// resp.end(make_jsonrpc_response(null, errors.parseError));
+		return cb(errors.parseError);
+	}
+	cb(null, json);
+};
+var validateParams = function (cb, json) {
+
+};
+var callMethod = function (currentEnv, currentHandler, req) {
+
+	return function (cb, json) {
+		if (typeof (currentHandler[json.method]) !== "function" ) {
+			return cb(errors.methodNotFound);
+		}
+		currentHandler[json.method](currentEnv, req, json.params, function (err, result) {
+			return cb(err, result);
+		});
+	};
+};
 var requestHandler = function (req, resp) {
 	var uri = url.parse(req.url).pathname;
 	var method = req.method;
@@ -84,7 +121,6 @@ var requestHandler = function (req, resp) {
 		return;
 	}
 	var body = '';
-	var json = null;
 	req.on('data', function (data) {
 		body += data;
             // Too much POST data, kill the connection!
@@ -97,22 +133,21 @@ var requestHandler = function (req, resp) {
 		}
 	});
 	req.on('end', function () {
-		try {
-			json = JSON.parse(body);
-		} catch (e) {
-			log.error ("Could not parse json:" +JSON.stringify(body) + " because:", e);
-			resp.writeHead(400, {'Content-Type': 'application/json'});
-			resp.end (make_jsonrpc_response(null, errors.parseError));
-			return;
-		}
-		if ( ! is_jsonrpc_protocol(json) ) {
-			log.error ("Not jsonrpc protocol," + JSON.stringify(json));
-			resp.writeHead(400, {'Content-Type': 'application/json'});
-			resp.end(make_jsonrpc_response(null, errors.parseError));
-			return;
-		}
+
+		async.waterfall([
+			tryParse(body),
+			checkJsonrpc,
+			validateParams,
+			callMethod(currentEnv, currentHandler, req)
+		], function (err, results) {
+			/*
+				TODO:
+				rezolva problema cu tratarea erorilor aici
+			*/
+		});
+
 		// method check
-		if (typeof (currentHandler[json.method]) === "function" ) {
+		/*if (typeof (currentHandler[json.method]) === "function" ) {
 			currentHandler[json.method](currentEnv, req, json.params, function (err, result) {
 				if (err) {
 					log.error('Method error:', err);
@@ -129,7 +164,7 @@ var requestHandler = function (req, resp) {
 			resp.writeHead(404, {'Content-Type': 'application/json'});
 			resp.end(make_jsonrpc_response(json.id, errors.methodNotFound));
 			return;
-		}
+		}*/
 	});
 };
 jsonrpc.init = function (initobj, cb) {
