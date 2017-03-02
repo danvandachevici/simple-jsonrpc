@@ -28,7 +28,8 @@
   "homepage": "https://github.com/toranaga-samma/simple-jsonrpc",
   "dependencies": {
     "async": "^2.1.5",
-    "simple-color-log": "^1.0.1"
+    "simple-color-log": "^1.0.1",
+    "tv4": "^1.2.7"
   },
   "devDependencies": {
     "eslint": "^3.16.1",

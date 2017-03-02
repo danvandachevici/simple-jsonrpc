@@ -4,6 +4,7 @@ module.exports = {
 	test_func2: function (env, req, params, cb) {
 	},
 	add: function (env, req, params, cb) {
+        console.log ("Received params:", params);
 		if (typeof (params.a) === "undefined") {
 			return cb(null, env.increment);
 		}

@@ -4,6 +4,7 @@ var async 				= require('async');
 var url 				= require('url');
 var log 				= require('simple-color-log');
 var defaultConfig 		= require('./lib/default_config');
+var tv4 				= require('tv4');
 var errors 				= require('./lib/Errors');
 
 var jsonrpc 			= {};
@@ -74,19 +75,30 @@ var tryParse = function(body) {
 		cb(null, json);
 	};
 };
-var checkJsonrpc = function(cb, json) {
+var checkJsonrpc = function(results, cb) {
+	var json = results.parse;
 	if ( ! isJsonrpcProtocol(json) ) {
 		log.error('Not jsonrpc protocol,' + JSON.stringify(json));
-		// resp.writeHead(400, {'Content-Type': 'application/json'});
-		// resp.end(makeJsonrpcResponse(null, errors.parseError));
 		return cb(errors.parseError);
 	}
 	cb(null, json);
 };
-var validateParams = function(cb, json) {
+var validateParams = function (env, validator) {
+	return function(results, cb) {
+		var json = results.parse;
+		log.debug("HANDLER:", validator);
+		var valid = tv4.validate(json.params, validator[json.method]);
+		if ( ! valid) {
+			log.error("Params not validated by user schema:", json);
+			log.error(tv4.error.message);
+			return cb(errors.invalidParams);
+		}
+		cb(null, json);
+	};
 };
 var callMethod = function(currentEnv, currentHandler, req) {
-	return function(cb, json) {
+	return function(results, cb) {
+		var json = results.parse;
 		if (typeof (currentHandler[json.method]) !== 'function' ) {
 			return cb(errors.methodNotFound);
 		}
@@ -101,6 +113,7 @@ var requestHandler = function(req, resp) {
 	var method = req.method;
 	var currentHandler = null;
 	var currentEnv = null;
+	var currentValidator = {};
 	if (method.toLowerCase() !== 'post') {
 		log.error('Non-post request:', method);
 		resp.writeHead(403);
@@ -109,7 +122,8 @@ var requestHandler = function(req, resp) {
 	}
 	if (typeof (run.services[uri]) === 'object' && run.services[uri] !== null) {
 		currentHandler = run.services[uri].handler;
-		currentEnv = run.services[uri].env;
+		currentEnv = run.services[uri].env || {};
+		currentValidator = run.services[uri].validator || {}
 	} else {
 		log.error('No such uri:', uri, run.services[uri]);
 		resp.writeHead(403);
@@ -137,12 +151,20 @@ var requestHandler = function(req, resp) {
 		}
 	});
 	req.on('end', function() {
-		async.waterfall([
-			tryParse(body),
-			checkJsonrpc,
-			validateParams,
-			callMethod(currentEnv, currentHandler, req)
-		], function(err, results) {
+		async.auto({
+			parse: tryParse(body),
+			jsonrpcCompliance: ['parse', checkJsonrpc],
+			validateParams: ['parse', 'jsonrpcCompliance', validateParams(currentEnv, currentValidator)],
+			callMethod: ['validateParams', callMethod(currentEnv, currentHandler, req)]
+		}, function(err, results) {
+			var json = results.parse;
+			if (err) {
+				if (json) {
+					return resp.end(makeJsonrpcResponse(json.id, err));
+				}
+				return resp.end(makeJsonrpcResponse(null, err));
+			}
+			resp.end(makeJsonrpcResponse(json.id, null, results.callMethod));
 			/*
 				TODO:
 				rezolva problema cu tratarea erorilor aici
@@ -197,15 +219,13 @@ jsonrpc.init = function(initobj, cb) {
 	var iterator = function(item, cbIt) {
 		var srv = item.route;
 		run.services[srv] = {
-			handler: item.handler
+			handler: item.handler,
+			validator: item.validator
 		};
 		run.services[srv].env = run.masterEnv;
-		if (typeof (item.env) === 'object' &&
-			item.env !== null && Object.keys(item.env).length !== 0) {
-			for (var key in item.env) {
-				if (item.env.hasOwnProperty(key)) {
-					run.services[srv].env[key] = item.env[key];
-				}
+		for (var key in item.env) {
+			if (item.env.hasOwnProperty(key)) {
+				run.services[srv].env[key] = item.env[key];
 			}
 		}
 		cbIt(null);

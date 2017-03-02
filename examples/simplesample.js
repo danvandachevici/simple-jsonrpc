@@ -1,7 +1,6 @@
 var jsonrpc = require ('../index.js');
 
 var http = require('http');
-var fs = require('fs');
 
 var jsonrpc_init_obj = {
 	loglevel: 'info',
@@ -11,6 +10,7 @@ var jsonrpc_init_obj = {
 	routes: [
 		{
 			route: '/api/test',
+            validator: require('./lib/schema'),
 			handler: require('./test_handler.js'),
 			env: {
 				increment: 4,
@@ -24,6 +24,7 @@ var jsonrpc_init_obj = {
 	]
 }
 
-jsonrpc.init(jsonrpc_init_obj, function (err) {
-	http.createServer(jsonrpc.request_handler).listen(9615);
-})
+jsonrpc.init(jsonrpc_init_obj, function (err, request_handler) {
+    console.log("Started listening on 9615");
+	http.createServer(request_handler).listen(9615);
+});
