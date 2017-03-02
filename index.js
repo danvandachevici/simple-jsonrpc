@@ -165,34 +165,7 @@ var requestHandler = function(req, resp) {
 				return resp.end(makeJsonrpcResponse(null, err));
 			}
 			resp.end(makeJsonrpcResponse(json.id, null, results.callMethod));
-			/*
-				TODO:
-				rezolva problema cu tratarea erorilor aici
-			*/
 		});
-
-		// method check
-		/*
-		if (typeof (currentHandler[json.method]) === 'function' ) {
-			currentHandler[json.method](currentEnv,
-			req, json.params, function (err, result) {
-				if (err) {
-					log.error('Method error:', err);
-					resp.writeHead(200, {'Content-Type': 'application/json'});
-					resp.end(makeJsonrpcResponse (json.id, errors.handlerError, err));
-					return;
-				} else {
-					resp.writeHead(200, {'Content-Type': 'application/json'});
-					resp.end(makeJsonrpcResponse(json.id, null, result));
-				}
-			});
-		} else {
-			log.error('Method ' + json.method + ' not found');
-			resp.writeHead(404, {'Content-Type': 'application/json'});
-			resp.end(makeJsonrpcResponse(json.id, errors.methodNotFound));
-			return;
-		}
-		*/
 	});
 };
 jsonrpc.init = function(initobj, cb) {
