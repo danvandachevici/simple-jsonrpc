@@ -12,6 +12,7 @@ var jsonrpc_init_obj = {
 			route: '/api/test',
             validator: require('./lib/schema'),
 			handler: require('./test_handler.js'),
+            middleware: [],
 			env: {
 				increment: 4,
 				inside_key: 'value2'
