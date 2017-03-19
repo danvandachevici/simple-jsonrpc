@@ -83,13 +83,13 @@ var checkJsonrpc = function(results, cb) {
 	}
 	cb(null, json);
 };
-var validateParams = function (env, validator) {
+var validateParams = function(env, validator) {
 	return function(results, cb) {
 		var json = results.parse;
-		log.debug("HANDLER:", validator);
+		log.debug('HANDLER:', validator);
 		var valid = tv4.validate(json.params, validator[json.method]);
 		if ( ! valid) {
-			log.error("Params not validated by user schema:", json);
+			log.error('Params not validated by user schema:', json);
 			log.error(tv4.error.message);
 			return cb(errors.invalidParams);
 		}
@@ -123,7 +123,7 @@ var requestHandler = function(req, resp) {
 	if (typeof (run.services[uri]) === 'object' && run.services[uri] !== null) {
 		currentHandler = run.services[uri].handler;
 		currentEnv = run.services[uri].env || {};
-		currentValidator = run.services[uri].validator || {}
+		currentValidator = run.services[uri].validator || {};
 	} else {
 		log.error('No such uri:', uri, run.services[uri]);
 		resp.writeHead(403);

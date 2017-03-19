@@ -6,9 +6,13 @@
   "directories": {
     "example": "examples"
   },
+  "watch": {
+    "lint": ["./index.js", "./lib/*.js"]
+  },
   "scripts": {
-    "test": "npm install && ./node_modules/.bin/mocha test/test.js",
-    "lint": "./node_modules/.bin/eslint index.js"
+    "test": "./node_modules/.bin/mocha test/test.js",
+    "lint": "./node_modules/.bin/eslint index.js",
+    "watch": "npm-watch"
   },
   "repository": {
     "type": "git",
@@ -35,6 +39,7 @@
     "eslint": "^3.16.1",
     "eslint-config-google": "^0.7.1",
     "mocha": "^3.2.0",
+    "npm-watch": "^0.1.8",
     "request": "^2.76.0"
   }
 }
