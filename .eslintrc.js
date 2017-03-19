@@ -3,6 +3,8 @@ module.exports = {
 	rules: {
 		"no-var": ["off"],
 		"no-multi-spaces": ["off"],
-		"comma-dangle": ["off"]
+		"comma-dangle": ["off"],
+        "padded-blocks": ["off"],
+        "max-len": ["off"]
 	}
 };
