@@ -3,8 +3,9 @@
 var async 				= require('async');
 var url 				= require('url');
 var log 				= require('simple-color-log');
-var defaultConfig 		= require('./lib/default_config');
 var tv4 				= require('tv4');
+
+var defaultConfig 		= require('./lib/default_config');
 var errors 				= require('./lib/Errors');
 
 var jsonrpc 			= {};
@@ -14,17 +15,22 @@ run.masterEnv 			= {};
 run.services 			= {};
 
 var libCanInit = jsonrpc.libCanInit = function(initobj) {
+	/* Check init object is an object with keys in it */
 	if (typeof initobj !== 'object' ||
 		initobj === null ||
 		Object.keys(initobj).length === 0) {
 		return errors.noInit;
 	}
-	if ( ! (initobj.routes instanceof Object ) ) {
+
+	/* Check whether the routes key exists and it's an array */
+	if ( ! (initobj.routes instanceof Object ) || 
+		(! Array.isArray(initobj.routes)) || 
+		initobj.routes.length === 0) {
 		return errors.noRoutes;
 	}
-	if (Object.keys(initobj.routes).length === 0) {
-		return errors.noRoutes;
-	}
+
+	/* Check each route definition is an object with at least a handler option */
+	/* Check possible properties of routes (route, validator, handler, middleware, etc) */
 	for (var i = 0; i < initobj.routes.length; i++) {
 		if (typeof (initobj.routes[i]) !== 'object' || initobj.routes[i] === null) {
 			return errors.wrongRoute;
@@ -33,6 +39,7 @@ var libCanInit = jsonrpc.libCanInit = function(initobj) {
 			! initobj.routes[i].hasOwnProperty('handler')) {
 			return errors.wrongRoute;
 		}
+		if ()
 	}
 	return errors.ok;
 };
@@ -86,7 +93,6 @@ var checkJsonrpc = function(results, cb) {
 var validateParams = function(env, validator) {
 	return function(results, cb) {
 		var json = results.parse;
-		log.debug('HANDLER:', validator);
 		var valid = tv4.validate(json.params, validator[json.method]);
 		if ( ! valid) {
 			log.error('Params not validated by user schema:', json);
@@ -169,6 +175,19 @@ var requestHandler = function(req, resp) {
 	});
 };
 jsonrpc.init = function(initobj, cb) {
+
+	/*
+	* check init object;
+	* merge default values;
+	* init the lib
+	*/
+
+	var err = libCanInit(initobj);
+	if ( err.code ) {		// error.code !== 0
+		log.error('Library can\'t init.' + err.message);
+		return cb(err);
+	}
+
 	if ( ! initobj.maxRequestDataSize ) {
 		initobj.maxRequestDataSize = defaultConfig.maxRequestDataSize;
 	}
@@ -183,11 +202,6 @@ jsonrpc.init = function(initobj, cb) {
 		initobj.env !== null &&
 		Object.keys(initobj.env).length !== 0) {
 		run.masterEnv = initobj.env;
-	}
-	var err = libCanInit(initobj);
-	if ( err.code ) {		// error.code !== 0
-		log.error('Library can\'t init.' + err.message);
-		return cb(err);
 	}
 	var iterator = function(item, cbIt) {
 		var srv = item.route;
