@@ -1,5 +1,5 @@
 var assert 		= require("assert");
-var jsonrpc 	= require ('../index.js');
+var jsonrpc 	= require ('../lib/jsonrpc');
 var http 		= require('http');
 var request 	= require('request');
 var log 		= require ('simple-color-log');
@@ -17,33 +17,33 @@ describe ("JSON RPC server:", function () {
 					}
 				]
 			};
-			assert.equal(0, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(0, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 		it ("Should find no init obj - empty init obj", function () {
 			var jsonrpc_init_obj = {};
-			assert.equal(-32001, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(-32001, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 		it ("Should find no routes - empty routes array", function () {
 			var jsonrpc_init_obj = {
 				routes: []
 			};
-			assert.equal(-32002, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(-32002, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 		it ("Should check for init obj - null init obj", function () {
 			var jsonrpc_init_obj = null;
-			assert.equal(-32001, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(-32001, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 		it ("Should check routes - no 'route' property", function () {
 			var jsonrpc_init_obj = {
 				routes: [{}]
 			};
-			assert.equal(-32003, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(-32003, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 		it ("Should check routes - not-object", function () {
 			var jsonrpc_init_obj = {
 				routes: ['/api/call/']
 			};
-			assert.equal(-32003, jsonrpc.lib_can_init(jsonrpc_init_obj).code);
+			assert.equal(-32003, jsonrpc.libCanInit(jsonrpc_init_obj).code);
 		});
 	});
 
