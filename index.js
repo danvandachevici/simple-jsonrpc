@@ -97,13 +97,13 @@ var checkJsonrpc = function(results, cb) {
     }
     cb(null, json);
 };
-var validateParams = function(env, validator) {
+var validateParams = function(route) {
     return function(results, cb) {
-        if ( ! validator) {
+        var json = results.parse;
+        if ( ! route.validator || ! route.validator[json.method]) {
             return cb(null);
         }
-        var json = results.parse;
-        var valid = tv4.validate(json.params, validator[json.method]);
+        var valid = tv4.validate(json.params, route.validator[json.method]);
         if ( ! valid) {
             log.error('Params not validated by user schema:', json);
             log.error(tv4.error.message);
@@ -112,16 +112,50 @@ var validateParams = function(env, validator) {
         cb(null, json);
     };
 };
-var callMethod = function(currentEnv, currentHandler, currentConfig, req) {
+var callMethod = function(req, route) {
     return function(results, cb) {
         var json = results.parse;
-        if (typeof (currentHandler[json.method]) !== 'function' ) {
+        if (typeof (route.handler[json.method]) !== 'function' ) {
             return cb(errors.methodNotFound);
         }
-        currentHandler[json.method](currentEnv, req, json.params,
+        route.currentHandler[json.method](route.env, req, json.params,
             function(err, result) {
             return cb(err, result);
         });
+    };
+};
+var middlewareIterator = function(req, resp, params, route) {
+    return function(middleMethod, cb) {
+        middleMethod(req, resp, params, route, function(err, results) {
+            cb(err, results);
+        });
+    };
+};
+var runMiddleware = function(when, req, resp, route) {
+    return function(results, cbAuto) {
+        var params = results.parse;
+
+        if (route.middleware &&
+            route.middleware[when] &&
+            Array.isArray(route.middleware[when]) &&
+            route.middleware[when].length > 0 ) {
+
+            var middleware = route.middleware[when];
+            for (var i = 0; i < middleware.length; i++) {
+                if ( typeof (middleware[i]) !== 'function') {
+                    return cbAuto(errors.weirdMiddleware);
+                }
+            }
+
+            async.eachSeries(middleware, middlewareIterator(req, resp, params, route), function(err) {
+                if (err) {
+                    return cbAuto(errors.middlewareError);
+                }
+                cbAuto(null);
+            });
+        } else {
+            cbAuto(null);
+        }
     };
 };
 var requestHandler = function(run) {
@@ -142,20 +176,16 @@ var requestHandler = function(run) {
         }
 
         var uri = url.parse(req.url).pathname;
-        var currentHandler = null;
-        var currentEnv = null;
-        var currentValidator = {};
-        if (typeof (run.services[uri]) === 'object' && run.services[uri] !== null) {
-            currentHandler = run.services[uri].handler;
-            currentEnv = run.services[uri].env || {};
-            currentValidator = run.services[uri].validator;
-        } else {
+
+        if (typeof (run.services[uri]) !== 'object' || ! run.services[uri]) {
             log.error('No such uri:', uri, run.services[uri]);
             resp.writeHead(403);
             resp.end();
             return;
         }
-        if (currentHandler === null) {
+
+        var route = run.services[uri];
+        if ( ! route.handler ) {
             log.error('No such handler');
             resp.writeHead(404);
             resp.end();
@@ -181,8 +211,10 @@ var requestHandler = function(run) {
             async.auto({
                 parse: tryParse(body),
                 jsonrpcCompliance: ['parse', checkJsonrpc],
-                validateParams: ['parse', 'jsonrpcCompliance', validateParams(currentEnv, currentValidator)],
-                callMethod: ['validateParams', callMethod(currentEnv, currentHandler, req)]
+                validateParams: ['parse', 'jsonrpcCompliance', validateParams(route)],
+                runPreMiddleware: ['parse', 'validateParams', runMiddleware('before', req, resp, route)],
+                callMethod: ['parse', 'runPreMiddleware', 'validateParams', callMethod(req, route)],
+                runPostMiddleware: ['parse', 'callMethod', runMiddleware('after', req, resp, route)]
             }, function(err, results) {
                 var json = results.parse;
                 if (err) {
@@ -237,7 +269,8 @@ jsonrpc.init = function(initobj, cb) {
         var srv = item.route;
         run.services[srv] = {
             handler: item.handler,
-            validator: item.validator
+            validator: item.validator,
+            middleware: item.middleware,
         };
         run.services[srv].env = run.masterEnv;
         for (var key in item.env) {
