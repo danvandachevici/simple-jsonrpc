@@ -1,8 +1,9 @@
 var assert 		= require("assert");
-var jsonrpc 	= require ('../lib/jsonrpc');
+var jsonrpc 	= require('../lib/jsonrpc');
 var http 		= require('http');
 var request 	= require('request');
-var log 		= require ('simple-color-log');
+var log 		= require('simple-color-log');
+var sinon       = require('sinon');
 
 var testport 	= 9983;
 
@@ -121,4 +122,58 @@ describe ("JSON RPC server:", function () {
 			});
 		});
 	});
+    describe("Middleware", function () {
+        describe("middlewareIterator", function () {
+            it ("Calls the middle method with right arguments", function () {
+                var middle = sinon.stub();
+                var spy = sinon.spy();
+                middle.callsArgWith(4, null, {result: 1});
+                jsonrpc.middlewareIterator({req: 1}, {resp: 1}, {params: 1}, {route: 1}, {})(middle, spy);
+                sinon.assert.calledWith(middle, {req: 1}, {resp: 1});
+            });
+            it ("Calls back with error when middleware calls back with error", function () {
+                var middle = sinon.stub();
+                var spy = sinon.spy();
+                middle.callsArgWith(4, 'SomeErr');
+                jsonrpc.middlewareIterator({}, {}, {}, {})(middle, spy);
+                sinon.assert.calledWith(spy, 'SomeErr');
+            });
+            it ("Calls back with middleware result, if all goes well", function () {
+                var middle = sinon.stub();
+                var spy = sinon.spy();
+                middle.callsArgWith(4, null, {result: 1});
+                jsonrpc.middlewareIterator({}, {}, {}, {})(middle, spy);
+                sinon.assert.calledWith(spy, null, {result: 1});
+            });
+        });
+        describe("runMiddleware", function () {
+            it ("Calls the middleware if it is properly defined in config", function (done) {
+                var count = 0;
+                var mockMiddleware = function (p1, p2, p3, p4, p5) {count ++; console.log("!!!!   MIDDLEWARE CALLED " + count); p5(null);};
+                var midIt = sinon.stub(jsonrpc, 'middlewareIterator');
+                var stub = sinon.stub();
+                var when = "before";
+                midIt.returns(stub);
+                stub.callsArgWith(1, null);
+                var req = {};
+                var resp = {};
+                var route = {
+                    middleware: {
+                        before: [mockMiddleware, 1],
+                        test: mockMiddleware
+                    }
+                };
+                var results = {
+                    parse: {key: 1}
+                };
+
+                console.log("ROUTE BEFORE:", route);
+                jsonrpc.runMiddleware(when, req, resp, route)(results, function () {
+                    assert.equal(count, 1);
+                    midIt.restore();
+                    done();
+                });
+            });
+        });
+    });
 });

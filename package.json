@@ -7,7 +7,15 @@
     "example": "examples"
   },
   "watch": {
-    "lint": ["./index.js", "./lib/*.js"]
+    "lint": [
+      "./index.js",
+      "./lib/*.js"
+    ],
+    "test": [
+        "./index.js",
+        "./lib/*.js",
+        "./test/test.js"
+    ]
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha test/test.js",
@@ -40,6 +48,7 @@
     "eslint-config-google": "^0.7.1",
     "mocha": "^3.2.0",
     "npm-watch": "^0.1.8",
-    "request": "^2.76.0"
+    "request": "^2.76.0",
+    "sinon": "^2.1.0"
   }
 }
