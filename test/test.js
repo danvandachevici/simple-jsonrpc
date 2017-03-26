@@ -4,6 +4,7 @@ var http 		= require('http');
 var request 	= require('request');
 var log 		= require('simple-color-log');
 var sinon       = require('sinon');
+var errors      = require('../lib/Errors');
 
 var testport 	= 9983;
 
@@ -104,6 +105,7 @@ describe ("JSON RPC server:", function () {
 			});
 		});
 		it ("Should return the default increment", function (done) {
+            // log.setLogLevel('none');
 			var result = {jsonrpc: "2.0", id:3, result: 4};
 			request_with_params({}, function(err, res, body) {
 				assert.deepEqual (err, null);
@@ -113,6 +115,7 @@ describe ("JSON RPC server:", function () {
 			});
 		});
 		it ("Should fail gracefuly if request too big", function (done) {
+            log.setLogLevel('none');
 			var result = {jsonrpc: "2.0", id:3, result: 4};
 			var str = {key: "dowpkaofkoekefokgorejgiejiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijoinknjnjknkiojuyuhbjnkjiuyghjnkmijuhjkmiojujkijujkijkmliojuhjnkmiojujnkmjiujnkmiojujnkmliojuhbjnkmloiuhjnkmloiujnkmliojuhjnkm"};
 			request_with_params(str, function(err, res, body) {
@@ -148,29 +151,44 @@ describe ("JSON RPC server:", function () {
         });
         describe("runMiddleware", function () {
             it ("Calls the middleware if it is properly defined in config", function (done) {
-                var count = 0;
-                var mockMiddleware = function (p1, p2, p3, p4, p5) {count ++; console.log("!!!!   MIDDLEWARE CALLED " + count); p5(null);};
-                var midIt = sinon.stub(jsonrpc, 'middlewareIterator');
-                var stub = sinon.stub();
+                var mockMiddleware = sinon.stub();
+                mockMiddleware.callsArgWith(4, null);
                 var when = "before";
-                midIt.returns(stub);
-                stub.callsArgWith(1, null);
                 var req = {};
                 var resp = {};
                 var route = {
                     middleware: {
-                        before: [mockMiddleware, 1],
-                        test: mockMiddleware
+                        before: [mockMiddleware],
                     }
                 };
                 var results = {
                     parse: {key: 1}
                 };
 
-                console.log("ROUTE BEFORE:", route);
-                jsonrpc.runMiddleware(when, req, resp, route)(results, function () {
-                    assert.equal(count, 1);
-                    midIt.restore();
+                jsonrpc.runMiddleware(req, resp, when, route)(results, function () {
+                    sinon.assert.callCount(mockMiddleware, 1);
+                    done();
+                });
+            });
+            it ("Calls back with error, if any middleware calls back with error", function (done) {
+                var mockMiddleware = sinon.stub();
+                mockMiddleware.callsArgWith(4, "SomeErr");
+                var secondMiddleware = sinon.stub();
+                secondMiddleware.callsArgWith(4, null);
+                var when = "before";
+                var req = {};
+                var resp = {};
+                var route = {
+                    middleware: {
+                        before: [secondMiddleware, mockMiddleware, secondMiddleware],
+                    }
+                };
+                var results = {
+                    parse: {key: 1}
+                };
+
+                jsonrpc.runMiddleware(req, resp, when, route)(results, function (err, res) {
+                    assert.deepEqual(err, errors.middlewareError);
                     done();
                 });
             });
