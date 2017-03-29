@@ -26,7 +26,6 @@ Example:
 
 *index.js*
 
-    ```javascript
     var jsonrpc = require ('simple-jsonrpc-server');
 
     var http = require('http');
@@ -43,7 +42,6 @@ Example:
     jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
         http.createServer(handler).listen(9615);
     });
-    ```
 
 This will create an HTTP server that listens on port 9615. Whenever a request arrives, it will unpack the request (sent with the content-type header set to 'application/json'), check for a **method** property in the data, and pass the request to that method, if it exists in the handler.
 
@@ -51,14 +49,12 @@ Handler sample:
 
 *handler.js*
 
-    ```javascript
     var exp = {};
     exp.add = function (env, req, params, cb) {
         cb(null, params.a + params.b);
     };
 
     module.exports = exp;
-    ```
 
 
 ## Environments<a name="environments"></a>
@@ -69,7 +65,6 @@ Example:
 
 *index.js*
 
-    ```javascript
     var jsonrpc = require ('simple-jsonrpc-server');
     
     var http = require('http');
@@ -93,13 +88,11 @@ Example:
     jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
         http.createServer(handler).listen(9615);
     });
-    ```
 
 We have added an increment environment variable to the */api/test* handler. And a master **env** key, with the value 'value', in case we need it somewhere, in our routes handlers.
 
 *handler.js*
 
-    ```javascript
     module.exports = {
         add: function (env, req, params, cb) {
             if (typeof (params.a) === "undefined") {
@@ -112,7 +105,6 @@ We have added an increment environment variable to the */api/test* handler. And 
             }
         }
     }
-    ```
 
 Now we can handle the request and add 2 numbers even if there are 2 numbers passed in, one number, or no number at all. We'll consider the increment to be whatever was set in the route **env** (in this case, the increment is 4);
 
@@ -125,7 +117,6 @@ If you ALSO set it in the route environment (as well as in the master environmen
 
 *index.js*
     
-    ```javascript
     var jsonrpc = require ('simple-jsonrpc-server');
     
     var http = require('http');
@@ -153,27 +144,22 @@ If you ALSO set it in the route environment (as well as in the master environmen
     jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
         http.createServer(handler).listen(9615);
     });
-    ```
 
 *additions.js*
 
-    ```javascript
     module.exports = {
         add: function (env, req, params, cb) {
             cb(null, params.a + env.increment);  // <-- this will add a 4 to the value of params.a
         }
     }
-    ```
 
 *subtractions.js*
 
-    ```javascript
     module.exports = {
         subtract: function (env, req, params, cb) {
             cb(null, params.a - env.increment); // <-- this will subtract 1, since this route didn't have an increment defined in its environment, but there is one in the master env.
         }
     };
-    ```
 
 ### Common use cases<a name="#environments-usecases"></a>
 
@@ -189,7 +175,6 @@ In order to use validation with your JSONRPC APIs, simply add another property t
 
 *index.js*
 
-     ```javascript
     var jsonrpc = require ('simple-jsonrpc-server');
     
     var http = require('http');
@@ -208,11 +193,9 @@ In order to use validation with your JSONRPC APIs, simply add another property t
     jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
         http.createServer(handler).listen(9615);
     });
-    ```
 
 *validation_schema.js*
 
-    ```javascript
     module.exports = {
         add: {
             type: "object",
@@ -223,7 +206,6 @@ In order to use validation with your JSONRPC APIs, simply add another property t
             }
         }
     }
-    ```
 
 The **validator** property above specifies what the validator looks like.
 The required file simply exports an object with the root properties being the names of methods that are validated. In this case, our *add* function is validated through TV4 syntax.
@@ -240,7 +222,6 @@ Basically things that should not alter the business logic, and you want to keep 
 
 This is when you might need ... Middleware ! 
 
-    ```javascript
     var jsonrpc = require ('simple-jsonrpc-server');
     
     var http = require('http');
@@ -276,7 +257,6 @@ This is when you might need ... Middleware !
     jsonrpc.init(jsonrpc_init_obj, function (err, handler) {
         http.createServer(handler).listen(9615);
     });
-    ```
 
 Simply respond from the middleware, and decide whether you want the request to go forward to the methods, or not.
 
