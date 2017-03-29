@@ -8,8 +8,8 @@ var errors      = require('../lib/Errors');
 
 var testport 	= 9983;
 
-describe ("JSON RPC server:", function () {
-	describe ("Configuration:", function () {
+describe("JSON RPC server:", function () {
+	describe("Configuration:", function () {
 		it('Should be able to init', function (){
 			var jsonrpc_init_obj = {
 				routes: [
@@ -49,9 +49,9 @@ describe ("JSON RPC server:", function () {
 		});
 	});
 
-	describe ("Initialization:", function () {
+	describe("Initialization:", function () {
 	});
-	describe ("Routes:", function () {
+	describe("Routes:", function () {
 		// var gresp, gbody;
 		var request_with_params = function (prms, done) {
 			var opts = {

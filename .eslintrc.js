@@ -1,10 +1,24 @@
 module.exports = {
-    "extends": "google",
-	rules: {
-		"no-var": ["off"],
-		"no-multi-spaces": ["off"],
-		"comma-dangle": ["off"],
-        "padded-blocks": ["off"],
-        "max-len": ["off"]
-	}
+    "env": {
+        "node": true
+    },
+    "extends": "eslint:recommended",
+    "rules": {
+        "indent": [
+            "error",
+            4
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ]
+    }
 };
