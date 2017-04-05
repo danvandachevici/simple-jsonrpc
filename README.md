@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/toranaga-samma/simple-jsonrpc.svg?branch=master)](https://travis-ci.org/toranaga-samma/simple-jsonrpc)
+
 # simple-jsonrpc
 A quick and easy-to-use library for JSON-RPC server.
 
