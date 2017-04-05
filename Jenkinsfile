@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    dockerfile {
+      filename 'jenkins/node610.dockerfile'
+    }
+    
+  }
   stages {
     stage('Install') {
       steps {
