@@ -7,15 +7,8 @@
     "example": "examples"
   },
   "watch": {
-    "lint": [
-      "./index.js",
-      "./lib/*.js"
-    ],
-    "test": [
-        "./index.js",
-        "./lib/*.js",
-        "./test/test.js"
-    ]
+    "lint": "{.,lib}/*.js",
+    "test": "{.,lib,test}/*.js"
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha test/test.js",
