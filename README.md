@@ -229,7 +229,7 @@ This is when you might need ... Middleware !
     var http = require('http');
     var fs = require('fs');
 
-    var authenticate = function (req, resp, params, route, cb) {
+    var authenticate = function (env, req, resp, params, cb) {
         if (params.user && params.user.token) {
             // check token
             if (params.user.token === "token id 1") {
