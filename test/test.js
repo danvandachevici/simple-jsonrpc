@@ -131,8 +131,8 @@ describe("JSON RPC server:", function () {
                 var middle = sinon.stub();
                 var spy = sinon.spy();
                 middle.callsArgWith(4, null, {result: 1});
-                jsonrpc.middlewareIterator({req: 1}, {resp: 1}, {params: 1}, {route: 1}, {})(middle, spy);
-                sinon.assert.calledWith(middle, {req: 1}, {resp: 1});
+                jsonrpc.middlewareIterator({req: 1}, {resp: 1}, {params: 1}, {env: {param: 1}}, {})(middle, spy);
+                sinon.assert.calledWith(middle, {param: 1}, {req: 1}, {resp: 1}, {params: 1});
             });
             it ("Calls back with error when middleware calls back with error", function () {
                 var middle = sinon.stub();
